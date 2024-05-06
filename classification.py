@@ -185,7 +185,10 @@ def classification_report(
     df["id"] = np.arange(len(df))
     df_length = len(df)
 
-    labels = create_numba_list(np.unique(df["label"]))
+    # Line below is edited to avoid segmentation faults when labels used in the 'predicted' column were missing from the 'label' column.
+    # (This is particularly noticeable when evaluating small datasets.)
+    labels = create_numba_list(np.unique(pd.concat([df["label"], df["predicted"]])))
+    
     n_labels = len(labels)
     mapping_df = pd.DataFrame({"class": labels, "value": range(len(labels))})
     df_label_encoded = df.merge(mapping_df, left_on="label", right_on="class")
