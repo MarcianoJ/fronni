@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="fronni",                     # This is the name of the package
-    packages = ['fronni'],   # Chose the same as "name"
+    packages = setuptools.find_packages(),
     version="0.0.5",                        # The initial release version
     author="Kaushik Mitra",                     # Full name of the author
     author_email='kaushik.umcp@gmail.com',
