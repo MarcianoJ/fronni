@@ -11,7 +11,7 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
 from sklearn.metrics import classification_report as sklearn_classification_report
-from .classification import classification_report
+from .fronni.classification import classification_report
 from sklearn.datasets import make_gaussian_quantiles
 
 logger = logging.getLogger(__name__)

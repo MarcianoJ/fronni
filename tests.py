@@ -11,14 +11,14 @@ from sklearn.metrics import classification_report as sklearn_classification_repo
 from sklearn.metrics import confusion_matrix as sklearn_confusion_matrix
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
-from .classification import (
+from .fronni.classification import (
     create_numba_list,
     classification_report,
     metrics_from_confusion_matrix,
     confusion_matrix,
     plot_classification_report,
 )
-from .regression import regression_report
+from .fronni.regression import regression_report
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)
