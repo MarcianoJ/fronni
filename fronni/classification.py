@@ -41,10 +41,18 @@ def confusion_matrix(y_true, y_pred, labels, n_labels):
 @jit(nopython=True, cache=True)
 def metrics_from_confusion_matrix(confusion_matrix, classes):
     metrics = List()
+    precisions = List()
+    recalls = List()
+    f1_scores = List()
+    supports = List()
+
+    tps = List()
+
     zero_matrix = np.zeros(confusion_matrix.shape, dtype=numba.int32)
 
     for i in range(len(classes)):
         tp = confusion_matrix[i, i]
+        tps.append(tp)
 
         # FN = row i - TP
         fn_mask = np.copy(zero_matrix)
@@ -79,9 +87,38 @@ def metrics_from_confusion_matrix(confusion_matrix, classes):
         if precision > 0 and recall > 0:
             f1_score = 2 * precision * recall / (precision + recall)
 
+        support = tp + fn
+
         metrics.append(precision)
         metrics.append(recall)
         metrics.append(f1_score)
+
+        precisions.append(precision)
+        recalls.append(recall)
+        f1_scores.append(f1_score)
+        supports.append(float(support))
+
+    macro_precision = sum(precisions) / len(precisions)
+    macro_recall = sum(recalls) / len(recalls)
+    macro_f1_score = sum(f1_scores) / len(f1_scores)
+    
+    df_length = sum(supports)
+
+    weighted_precision = sum([(support / df_length) * precision for precision, support in list(zip(precisions, supports))])
+    weighted_recall = sum([(support / df_length) * recall for recall, support in list(zip(recalls, supports))])
+    weighted_f1_score = sum([(support / df_length) * f1_score for f1_score, support in list(zip(f1_scores, supports))])
+
+    total_accuracy = sum(tps) / sum(supports)
+
+    metrics.append(macro_precision)
+    metrics.append(macro_recall)
+    metrics.append(macro_f1_score)
+    
+    metrics.append(weighted_precision)
+    metrics.append(weighted_recall)
+    metrics.append(weighted_f1_score)
+
+    metrics.append(total_accuracy)
 
     return metrics
 
@@ -187,7 +224,10 @@ def classification_report(
 
     # Line below is edited to avoid segmentation faults when labels used in the 'predicted' column were missing from the 'label' column.
     # (This is particularly noticeable when evaluating small datasets.)
-    labels = create_numba_list(np.unique(pd.concat([df["label"], df["predicted"]])))
+    np_labels = np.unique(pd.concat([df["label"], df["predicted"]]))
+    labels = create_numba_list(np_labels)
+    np_extended_labels = np.append(np_labels, np.array(["<macro>", "<weighted>"]))
+    extended_labels = create_numba_list(np_extended_labels)
     
     n_labels = len(labels)
     mapping_df = pd.DataFrame({"class": labels, "value": range(len(labels))})
@@ -205,8 +245,9 @@ def classification_report(
         ), "please remove the '^' character from your labels, it's used as a delimiter in fronni"
     headers = [
         str(item[0]) + "^" + str(item[1])
-        for item in product(labels, ["precision", "recall", "f1_score"])
-    ]
+        for item in product(extended_labels, ["precision", "recall", "f1_score"])
+    ] + ["<global>^accuracy"]
+
     delta = (1 - (confidence_level / 100)) / 2
     start_index = math.floor(n * delta)
     end_index = math.floor(n * (1 - delta))
@@ -228,11 +269,22 @@ def classification_report(
         header_parts = headers[index].split("^")
         class_name = header_parts[0]
         metric_name = header_parts[1]
+        sample_size = df_length if class_name.startswith("<") and class_name.endswith(">") else label_count_dict.get(class_name)
+
+        lower_delta = row[0] - row[2]
+        upper_delta = row[1] - row[2]
+        lower_percentage = (row[0] / row[2] - 1.0) * 100
+        upper_percentage = (row[1] / row[2] - 1.0) * 100
+
         dict_results[class_name][metric_name] = {
-            "true": row[2],
-            "lower": row[0],
-            "upper": row[1],
-            "sample_size": label_count_dict.get(class_name),
+            "true": round(row[2], 2),
+            "lower": round(row[0], 2),
+            "upper": round(row[1], 2),
+            "lower Δ": round(lower_delta, 3),
+            "upper Δ": round(upper_delta, 3),
+            "lower %": round(lower_percentage, 1),
+            "upper %": round(upper_percentage, 1),
+            "sample_size": sample_size,
         }
     if sort_by_sample_size:
         dict_results = dict(
