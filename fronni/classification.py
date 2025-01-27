@@ -273,8 +273,8 @@ def classification_report(
 
         lower_delta = row[0] - row[2]
         upper_delta = row[1] - row[2]
-        lower_percentage = (row[0] / row[2] - 1.0) * 100
-        upper_percentage = (row[1] / row[2] - 1.0) * 100
+        lower_percentage = 0.0 if row[2] == 0.0 else (row[0] / row[2] - 1.0) * 100
+        upper_percentage = 0.0 if row[2] == 0.0 else (row[1] / row[2] - 1.0) * 100
 
         dict_results[class_name][metric_name] = {
             "true": round(row[2], 2),
