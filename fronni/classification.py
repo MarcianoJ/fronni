@@ -285,6 +285,9 @@ def classification_report(
             "lower %": round(lower_percentage, 1),
             "upper %": round(upper_percentage, 1),
             "sample_size": sample_size,
+            "true_precise": row[2],
+            "lower_precise": row[0],
+            "upper_precise": row[1],
         }
     if sort_by_sample_size:
         dict_results = dict(
